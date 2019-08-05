@@ -3,6 +3,7 @@ package com.example.facedetection;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -35,6 +36,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
 import static com.example.facedetection.LBP.printMatrix;
 import static org.bytedeco.opencv.global.opencv_core.CV_32SC1;
@@ -166,26 +169,10 @@ public class ImagePreview extends AppCompatActivity implements View.OnClickListe
 
                     mat = orgImgMat.submat(rect);
 
-                 //   mat = new Mat();
-
-
-                    System.out.println("RGB mat " + mat);
-
-                    Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY, 3); //Changing Mat from rgb to gray scale
-//                    Mat grayScaleMat= mat;
-//                    grayScaleMat.convertTo(grayScaleMat, CV_8UC(3));
-
-                    System.out.println("Grayscale mat channel " + mat.channels());
-
-                    /*
-                     *JavaCv matvector
+                    /**
+                     * Changing Mat from rgb to gray scale
                      */
-                    System.setProperty("org.bytedeco.javacpp.maxphysicalbytes", "0");
-                    System.setProperty("org.bytedeco.javacpp.maxbytes", "0");
-                    MatVector images = new MatVector(facesArray.length);
-                    org.bytedeco.opencv.opencv_core.Mat labels = new org.bytedeco.opencv.opencv_core.Mat(facesArray.length, 1, CV_32SC1);
-
-
+                    Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY, 3);
 
                     /*
                      * Histogram Equalization
@@ -195,152 +182,77 @@ public class ImagePreview extends AppCompatActivity implements View.OnClickListe
                     Imgproc.equalizeHist(channels.get(0), channels.get(0));
                     Core.merge(channels, mat);
 
-                    System.out.println("Histogram mat " + mat);
-
-                    /**
-                     * Opencv mat to binary
-                     */
-//                    Mat binaryMat = new Mat();
-//                    Imgproc.threshold(mat, binaryMat, 200, 500, Imgproc.THRESH_BINARY);
-//                    System.out.println("Binary mat" + binaryMat);
-
-
-                    /**
-                     * Opencv mat to two dimension
-                     */
-                    //double[][] twoDimensionalMat= new double[][];
-                    System.out.print("mat rows "+ mat.rows()+" , mat cols "+mat.cols());
-
-
-                    /**
-                     * Convert mat to two dimensional array
-                     */
-                    double[][] matArray = ImagePreview.getMultiChannelArray(mat);
-                    System.out.println(Arrays.deepToString(matArray));
-
-                    LBP lbp = new LBP(1, 1);
-
-                    System.out.println("Neighbourhood");
-                    printMatrix(lbp.neighbourhood);
-                    byte[][] resultLBP = lbp.getLBP(matArray);
-
-                    System.out.println("VarianceImage");
-                    printMatrix(resultLBP);
-
-
-
-                    /*
-                     *Convert Opencv mat to javacv mat
-                     */
-                    org.bytedeco.opencv.opencv_core.Mat mat2 = new org.bytedeco.opencv.opencv_core.Mat((Pointer) null) {
-                        {
-                            address = mat.getNativeObjAddr();
-                        }
-                    };
-
-                    
-                    images.put(mat2);
-
-                    System.out.print("Java cv mat " + images.get(0));
-
-
-
-
-                    /**
-                     * LBPHFaceRecognizer
-                     */
-                    LBPHFaceRecognizer faceRecognizer = LBPHFaceRecognizer.create();
-                    faceRecognizer.train(images, labels);
-
-
-                    /**
-                     * MatVector and mat data from facerecognizer
-                     */
-
-                    MatVector matVector= faceRecognizer.getHistograms();
-
-
-                    org.bytedeco.opencv.opencv_core.Mat faceRecognizerMat= new org.bytedeco.opencv.opencv_core.Mat();
-
-                    faceRecognizerMat= matVector.get(0);
-
-
-
-                    String faceRecognizerString = matVector.toString();
-                    System.out.println("Face Recognizer String " + faceRecognizerString);
-
-                    System.out.println("face Recognizer mat col " + faceRecognizerMat.col(0));
-
-                    org.bytedeco.opencv.opencv_core.Mat mat3 = faceRecognizerMat.row(0);
-                    org.bytedeco.opencv.opencv_core.Mat mat4 = faceRecognizerMat.col(0);
-
-
-                    /**
-                     * Convert javacv mat to opencv mat
-                     */
-                    Mat faceRecognizerMat2= new Mat(faceRecognizerMat.rows(),faceRecognizerMat.cols(), CvType.CV_8UC1);
-
-                    double[][] facerecogmatArray = ImagePreview.getMultiChannelArray(faceRecognizerMat2);
-                    System.out.println(Arrays.deepToString(facerecogmatArray));
-
-                    Mat faceRecognizerMat3 = new Mat(mat3.rows(), mat3.cols(), CvType.CV_8UC1);
-                    Mat faceRecognizerMat4 = new Mat(mat4.rows(), mat4.cols(), CvType.CV_8UC1);
-                    System.out.println("Face Recognizer Mat 2" + faceRecognizerMat2);
-                    System.out.println("Face Recognizer Mat 3" + faceRecognizerMat3);
-                    System.out.println("Face Recognizer Mat 4" + faceRecognizerMat4);
-
-
-                    /**
-                     * Mat to byteArray
-                     */
 
 //                    /**
-//                     * ToDo test to show image and delete it later
+//                     * Converting mat to base64encoded string
 //                     */
-//                    mat= faceRecognizerMat2;
+//                    int cols = mat.cols();
+//                    int rows = mat.rows();
+//                    int elemSize = (int) mat.elemSize();
+//
+//                    byte[] data = new byte[cols * rows * elemSize];
+//
+//                    mat.get(0, 0, data);
 
-                    /**
-                     * Convert javacv mat to bitmap
-                     */
-//                    AndroidFrameConverter convertToBitmap = new AndroidFrameConverter();
-//                    OpenCVFrameConverter.ToMat converterToMat = new OpenCVFrameConverter.ToMat();
-//                    Frame frame = converterToMat.convert(faceRecognizerMat);
-//                    Bitmap javaCvBitmap = convertToBitmap.convert(frame);
-
-                    /**
-                     * Converting mat to base64encoded string
-                     */
-                    int cols = mat.cols();
-                    int rows = mat.rows();
-                    int elemSize = (int) mat.elemSize();
-
-                    byte[] data = new byte[cols * rows * elemSize];
-
-                    mat.get(0, 0, data);
-
-                    System.out.println("Data String : " + data);
-
-                    // We cannot set binary data to a json object, so:
-                    // Encoding data byte array to Base64.
-                    String dataString = new String(Base64.encode(data, Base64.DEFAULT));
-                    System.out.println("Data Encoded String : " + dataString);
-
-                    Sender sender= new Sender();
-                    sender.execute(dataString);
-
-
+//
+//                    /**
+//                     * ToDo
+//                     */
+//                    // We cannot set binary data to a json object, so:
+//                    // Encoding data byte array to Base64.
+////                    String dataString = new String(Base64.encode(data, Base64.DEFAULT));
+////                    System.out.println("Data Encoded String : " + dataString);
+////
+////                    Sender sender= new Sender();
+////                    sender.execute(dataString);
+//
                     /*
                      * Change Mat to Bitmap
                      */
                     Bitmap bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(mat, bitmap);
-                    System.out.println("Image resoulution " + bitmap.getWidth() + " x " + bitmap.getHeight());
 
-                    int bitmapByteCount = BitmapCompat.getAllocationByteCount(bitmap);
 
-                    System.out.print("Cropped Image size " + bitmapByteCount);
+                    int width = bitmap.getWidth();
+                    int height = bitmap.getHeight();
+                    double[][] lbpInputArray = new double[width][height];
+                    for (int i = 0; i < width; i++) {
+                        for (int j = 0; j < height; j++) {
+                            lbpInputArray[i][j] = (double) bitmap.getPixel(i, j);
+                        }
+                    }
+
+                    LBP lbp = new LBP(8, 1);
+
+                    byte[][] resultLBP = lbp.getLBP(lbpInputArray);
+
+                    System.out.println("VarianceImage");
+                    printMatrix(resultLBP);
+
+                    double[] histogramArray = changeOneDimension(resultLBP);
+
+                    System.out.println("HistogramArray");
+                    printMatrix(histogramArray);
+
+                    double[] normalizedHistogram = lbp.histc(histogramArray);
+                    System.out.println("Normalized histogram");
+                    printMatrix(normalizedHistogram);
+
+                    List<Double> finalMatrix = new ArrayList<Double>();
+                    for(double d: normalizedHistogram){
+                        finalMatrix.add(d);
+                    }
+
+                    for(int i=0; i< finalMatrix.size(); i++){
+                        System.out.print("List" + finalMatrix.get(i));
+                    }
+
+                    Sender sender =new Sender();
+                    sender.execute(finalMatrix);
+
 
                     imageView.setImageBitmap(bitmap);
+                    btnSend.setVisibility(View.INVISIBLE);
                 }
                 break;
             }
@@ -348,23 +260,25 @@ public class ImagePreview extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    public static double[][] getMultiChannelArray(Mat m) {
-        //first index is pixel, second index is channel
-        int numChannels = m.channels();//is 3 for 8UC3 (e.g. RGB)
-        int frameSize = m.rows() * m.cols();
-        byte[] byteBuffer = new byte[frameSize * numChannels];
-        m.get(0, 0, byteBuffer);
-
-        System.out.print("number of channels " + numChannels);
-
-        //write to separate R,G,B arrays
-        double[][] out = new double[frameSize][numChannels];
-        for (int p = 0, i = 0; p < frameSize; p++) {
-            for (int n = 0; n < numChannels; n++, i++) {
-                out[p][n] = byteBuffer[i];
+    public double[] changeOneDimension(byte[][] arr) {
+        List<Double> list = new ArrayList<Double>();
+        for (int i = 0; i < arr.length; i++) {
+            // tiny change 1: proper dimensions
+            for (int j = 0; j < arr[i].length; j++) {
+                // tiny change 2: actually store the values
+                list.add((double) arr[i][j]);
             }
         }
-        return out;
+
+        // now you need to find a mode in the list.
+
+        // tiny change 3, if you definitely need an array
+        double[] vector = new double[list.size()];
+        for (int i = 0; i < vector.length; i++) {
+            vector[i] = list.get(i);
+        }
+
+        return vector;
     }
 }
 
